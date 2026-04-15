@@ -14,6 +14,7 @@ const corsOptions = {
     'http://localhost:3000',      // Alternativa dev
     'http://localhost:5000',      // Backend local
     'https://monitoraapanfacial-backend.onrender.com',
+    'https://monitoraapan.vercel.app',  // Vercel frontend
     process.env.FRONTEND_URL,     // URL do frontend (se definida)
   ].filter((url): url is string => Boolean(url)),
   credentials: true,
