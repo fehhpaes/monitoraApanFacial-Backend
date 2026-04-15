@@ -2,13 +2,18 @@ import QRCode from 'qrcode';
 import cloudinary from '../config/cloudinary';
 import { Readable } from 'stream';
 
+interface QRCodeResult {
+  qrCodeUrl?: string;
+  qrCodePublicId?: string;
+}
+
 export const generateQRCodeForStudent = async (studentData: {
   _id: string;
   nome: string;
   curso: string;
   fotoUrl: string;
   emailResponsavel: string;
-}) => {
+}): Promise<QRCodeResult> => {
   try {
     // Criar dados do QR Code em JSON
     const qrData = JSON.stringify({
@@ -22,11 +27,10 @@ export const generateQRCodeForStudent = async (studentData: {
 
     // Gerar QR Code como PNG em buffer
     const qrCodeBuffer = await QRCode.toBuffer(qrData, {
-      errorCorrectionLevel: 'H',
-      type: 'image/png',
-      quality: 0.95,
-      margin: 1,
+      errorCorrectionLevel: 'H' as const,
+      type: 'png' as const,
       width: 300,
+      margin: 1,
     });
 
     // Upload para Cloudinary

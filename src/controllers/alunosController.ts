@@ -256,8 +256,8 @@ export const generateQRCode = async (req: Request, res: Response): Promise<void>
     const alunoAtualizado = await Aluno.findByIdAndUpdate(
       id,
       {
-        qrCodeUrl: qrCodeData.qrCodeUrl,
-        qrCodePublicId: qrCodeData.qrCodePublicId,
+        qrCodeUrl: qrCodeData?.qrCodeUrl,
+        qrCodePublicId: qrCodeData?.qrCodePublicId,
         qrCodeGerado: true,
         dataAtualizacao: new Date(),
       },
