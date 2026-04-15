@@ -1,0 +1,59 @@
+import express from 'express';
+import cors from 'cors';
+import 'dotenv/config';
+import { connectDB } from './config/mongodb.js';
+import { configureCloudinary } from './config/cloudinary.js';
+import { errorHandler, notFoundHandler } from './middleware/errorHandler.js';
+import alunosRouter from './routes/alunos.js';
+import cursosRouter from './routes/cursos.js';
+
+const app = express();
+
+// Middleware
+app.use(cors());
+app.use(express.json({ limit: '50mb' }));
+app.use(express.urlencoded({ limit: '50mb', extended: true }));
+
+// Conectar ao banco de dados e configurar Cloudinary
+connectDB().catch((error) => {
+  console.error('Falha ao conectar ao banco de dados:', error);
+  process.exit(1);
+});
+
+try {
+  configureCloudinary();
+} catch (error) {
+  console.error('Falha ao configurar Cloudinary:', error);
+  process.exit(1);
+}
+
+// Rotas
+app.use('/api/alunos', alunosRouter);
+app.use('/api/cursos', cursosRouter);
+
+// Health check
+app.get('/health', (_req, res) => {
+  res.status(200).json({
+    success: true,
+    message: 'Servidor está funcionando',
+  });
+});
+
+// Tratamento de erros
+app.use(notFoundHandler);
+app.use(errorHandler);
+
+// Iniciar servidor
+const PORT = process.env.PORT || 5000;
+const server = app.listen(PORT, () => {
+  console.log(`🚀 Server rodando em http://localhost:${PORT}`);
+});
+
+// Graceful shutdown
+process.on('SIGTERM', () => {
+  console.log('SIGTERM recebido. Encerrando servidor...');
+  server.close(() => {
+    console.log('Servidor encerrado');
+    process.exit(0);
+  });
+});
