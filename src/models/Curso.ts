@@ -2,7 +2,8 @@ import mongoose, { Schema, Document } from 'mongoose';
 
 export interface ICursoDocument extends Document {
   nome: string;
-  descricao?: string;
+  sigla: string;
+  tipo: 'modular' | 'integral';
   dataCriacao: Date;
 }
 
@@ -14,9 +15,19 @@ const CursoSchema = new Schema<ICursoDocument>(
       unique: true,
       trim: true,
     },
-    descricao: {
+    sigla: {
       type: String,
+      required: [true, 'Sigla do curso é obrigatória'],
+      unique: true,
       trim: true,
+      maxlength: [7, 'Sigla não pode exceder 7 caracteres'],
+      match: [/^[A-Za-z0-9]+$/, 'Sigla deve conter apenas letras e números'],
+    },
+    tipo: {
+      type: String,
+      enum: ['modular', 'integral'],
+      default: 'modular',
+      required: [true, 'Tipo de curso é obrigatório'],
     },
     dataCriacao: {
       type: Date,

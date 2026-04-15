@@ -58,7 +58,7 @@ app.get('/api/cursos', (_req, res) => {
 
 app.post('/api/cursos', (req, res) => {
   try {
-    const { nome, descricao } = req.body;
+    const { nome, sigla, tipo } = req.body;
 
     if (!nome) {
       res.status(400).json({
@@ -68,12 +68,44 @@ app.post('/api/cursos', (req, res) => {
       return;
     }
 
-    const novoCurso = jsonStorage.createCurso(nome, descricao);
+    if (!sigla) {
+      res.status(400).json({
+        success: false,
+        message: 'Sigla do curso é obrigatória',
+      });
+      return;
+    }
+
+    if (sigla.length > 7) {
+      res.status(400).json({
+        success: false,
+        message: 'Sigla não pode exceder 7 caracteres',
+      });
+      return;
+    }
+
+    if (!/^[A-Za-z0-9]+$/.test(sigla)) {
+      res.status(400).json({
+        success: false,
+        message: 'Sigla deve conter apenas letras e números',
+      });
+      return;
+    }
+
+    if (!tipo || !['modular', 'integral'].includes(tipo)) {
+      res.status(400).json({
+        success: false,
+        message: 'Tipo deve ser "modular" ou "integral"',
+      });
+      return;
+    }
+
+    const novoCurso = jsonStorage.createCurso(nome, sigla, tipo);
     
     if (!novoCurso) {
       res.status(400).json({
         success: false,
-        message: 'Curso com este nome já existe',
+        message: 'Curso com este nome ou sigla já existe',
       });
       return;
     }

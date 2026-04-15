@@ -90,16 +90,17 @@ export const writeCursos = (cursos: any[]) => {
   fs.writeFileSync(CURSOS_FILE, JSON.stringify(cursos, null, 2));
 };
 
-export const createCurso = (nome: string, descricao?: string) => {
+export const createCurso = (nome: string, sigla: string, tipo: 'modular' | 'integral') => {
   const cursos = readCursos();
-  if (cursos.find((c: any) => c.nome === nome)) {
+  if (cursos.find((c: any) => c.nome === nome || c.sigla === sigla)) {
     return null;
   }
   const novoCurso = {
     _id: Date.now().toString(),
     nome,
-    descricao,
-    dataCriacao: new Date().toISOString(),
+    sigla,
+    tipo,
+    dataCadastro: new Date().toISOString(),
   };
   cursos.push(novoCurso);
   writeCursos(cursos);

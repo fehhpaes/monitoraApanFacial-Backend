@@ -99,7 +99,7 @@ app.get('/api/cursos', (_req, res) => {
 
 app.post('/api/cursos', (req, res) => {
   try {
-    const { nome, descricao } = req.body;
+    const { nome, sigla, tipo } = req.body;
 
     if (!nome) {
       res.status(400).json({
@@ -109,27 +109,72 @@ app.post('/api/cursos', (req, res) => {
       return;
     }
 
+    if (!sigla) {
+      res.status(400).json({
+        success: false,
+        message: 'Sigla do curso é obrigatória',
+      });
+      return;
+    }
+
+    if (sigla.length > 7) {
+      res.status(400).json({
+        success: false,
+        message: 'Sigla não pode exceder 7 caracteres',
+      });
+      return;
+    }
+
+    if (!/^[A-Za-z0-9]+$/.test(sigla)) {
+      res.status(400).json({
+        success: false,
+        message: 'Sigla deve conter apenas letras e números',
+      });
+      return;
+    }
+
+    if (!tipo || !['modular', 'integral'].includes(tipo)) {
+      res.status(400).json({
+        success: false,
+        message: 'Tipo deve ser "modular" ou "integral"',
+      });
+      return;
+    }
+
     if (usingMongoDB) {
       // Criar no MongoDB
       import('./models/Curso.js').then((module) => {
         const Curso = module.Curso;
-        const novoCurso = new Curso({ nome, descricao });
+        const novoCurso = new Curso({ nome, sigla, tipo });
         novoCurso.save().then(() => {
           res.status(201).json({
             success: true,
             message: 'Curso criado com sucesso',
             data: novoCurso,
           });
+        }).catch((error) => {
+          if (error.code === 11000) {
+            const field = Object.keys(error.keyPattern)[0];
+            res.status(400).json({
+              success: false,
+              message: `${field.charAt(0).toUpperCase() + field.slice(1)} já existe`,
+            });
+          } else {
+            res.status(400).json({
+              success: false,
+              message: error.message || 'Erro ao criar curso',
+            });
+          }
         });
       });
     } else {
       // Criar em JSON
-      const novoCurso = jsonStorage.createCurso(nome, descricao);
+      const novoCurso = jsonStorage.createCurso(nome, sigla, tipo);
       
       if (!novoCurso) {
         res.status(400).json({
           success: false,
-          message: 'Curso com este nome já existe',
+          message: 'Curso com este nome ou sigla já existe',
         });
         return;
       }
