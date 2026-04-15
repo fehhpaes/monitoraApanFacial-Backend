@@ -37,7 +37,7 @@ export const createAluno = async (req: Request, res: Response): Promise<void> =>
       res.status(400).json({
         success: false,
         message: 'Erro de validação',
-        errors: error.errors,
+        errors: error.issues,
       });
     } else {
       res.status(500).json({
@@ -130,12 +130,12 @@ export const updateAluno = async (req: Request, res: Response): Promise<void> =>
       message: 'Aluno atualizado com sucesso',
       data: alunoAtualizado,
     });
-  } catch (error) {
+   } catch (error) {
     if (error instanceof z.ZodError) {
       res.status(400).json({
         success: false,
         message: 'Erro de validação',
-        errors: error.errors,
+        errors: error.issues,
       });
     } else {
       res.status(500).json({

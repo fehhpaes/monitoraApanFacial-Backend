@@ -29,7 +29,7 @@ export const createAluno = async (req: Request, res: Response): Promise<void> =>
       res.status(400).json({
         success: false,
         message: 'Erro de validação',
-        errors: error.errors,
+        errors: error.issues,
       });
     } else {
       res.status(500).json({
@@ -63,7 +63,7 @@ export const getAllAlunos = async (_req: Request, res: Response): Promise<void> 
 
 export const getAlunoById = async (req: Request, res: Response): Promise<void> => {
   try {
-    const { id } = req.params;
+    const { id } = req.params as { id: string };
     const aluno = jsonStorage.getAlunoById(id);
 
     if (!aluno) {
@@ -89,11 +89,11 @@ export const getAlunoById = async (req: Request, res: Response): Promise<void> =
 
 export const updateAluno = async (req: Request, res: Response): Promise<void> => {
   try {
-    const { id } = req.params;
+    const { id } = req.params as { id: string };
     const data = updateAlunoSchema.parse(req.body);
 
     // Se uma nova foto foi enviada, deletar a antiga do Cloudinary
-    if (data.fotoPublicId) {
+    if (data.fotoPublicId && typeof data.fotoPublicId === 'string') {
       const alunoAntigo = jsonStorage.getAlunoById(id);
       if (alunoAntigo?.fotoPublicId && alunoAntigo.fotoPublicId !== data.fotoPublicId) {
         try {
@@ -119,12 +119,12 @@ export const updateAluno = async (req: Request, res: Response): Promise<void> =>
       message: 'Aluno atualizado com sucesso',
       data: alunoAtualizado,
     });
-  } catch (error) {
+   } catch (error) {
     if (error instanceof z.ZodError) {
       res.status(400).json({
         success: false,
         message: 'Erro de validação',
-        errors: error.errors,
+        errors: error.issues,
       });
     } else {
       res.status(500).json({
@@ -138,7 +138,7 @@ export const updateAluno = async (req: Request, res: Response): Promise<void> =>
 
 export const deleteAluno = async (req: Request, res: Response): Promise<void> => {
   try {
-    const { id } = req.params;
+    const { id } = req.params as { id: string };
     const aluno = jsonStorage.getAlunoById(id);
 
     if (!aluno) {
