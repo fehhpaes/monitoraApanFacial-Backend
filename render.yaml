@@ -1,0 +1,19 @@
+services:
+  - type: web
+    name: monitoraapan-backend
+    runtime: docker
+    dockerfilePath: ./Dockerfile
+    port: 5000
+    healthCheckPath: /health
+    autoDeploy: true
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: PORT
+        value: "5000"
+      - key: MONGODB_URI
+        scope: run_and_build
+        sync: false
+      - key: CLOUDINARY_URL
+        scope: run_and_build
+        sync: false
