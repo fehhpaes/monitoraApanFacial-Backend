@@ -64,24 +64,28 @@ connectDB()
 // Rota de cursos (funciona em ambos os modos)
 app.get('/api/cursos', (_req, res) => {
   try {
-    let cursos;
-    
     if (usingMongoDB) {
-      // Usar MongoDB
-      import('./models/Aluno.js').then((module) => {
-        const Aluno = module.Aluno;
-        Aluno.distinct('curso').then((cursosUnicos: string[]) => {
+      // Usar MongoDB - Buscar na coleção Curso
+      import('./models/Curso.js').then((module) => {
+        const Curso = module.Curso;
+        Curso.find().sort({ nome: 1 }).then((cursos) => {
           res.status(200).json({
             success: true,
-            data: cursosUnicos.map((nome) => ({ nome })),
-            total: cursosUnicos.length,
+            data: cursos,
+            total: cursos.length,
             mode: 'MongoDB',
+          });
+        }).catch((error) => {
+          res.status(500).json({
+            success: false,
+            message: 'Erro ao buscar cursos',
+            error: error.message,
           });
         });
       });
     } else {
       // Usar JSON local
-      cursos = jsonStorage.readCursos();
+      const cursos = jsonStorage.readCursos();
       res.status(200).json({
         success: true,
         data: cursos,
