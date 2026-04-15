@@ -15,7 +15,7 @@ const corsOptions = {
     'http://localhost:5000',      // Backend local
     'https://monitoraapanfacial-backend.onrender.com',
     process.env.FRONTEND_URL,     // URL do frontend (se definida)
-  ].filter(Boolean),
+  ].filter((url): url is string => Boolean(url)),
   credentials: true,
 };
 
@@ -34,19 +34,21 @@ try {
   console.error('❌ Falha ao configurar Cloudinary:', error);
 }
 
+// Carregar rotas sincronamente - ANTES de iniciar o servidor
+import alunosRouter from './routes/alunos.js';
+import alunosOfflineRouter from './routes/alunosOffline.js';
+
 // Tentar conectar ao MongoDB (não-bloqueante)
 import { connectDB } from './config/mongodb.js';
+
+// Tentar conectar ao MongoDB e carregar as rotas apropriadas
 connectDB()
   .then(() => {
     usingMongoDB = true;
     console.log('✅ MongoDB conectado com sucesso!');
     console.log('🗄️  Usando: MongoDB Atlas');
-
-    // Se MongoDB conectou, carregue as rotas do MongoDB
-    import('./routes/alunos.js').then((module) => {
-      const alunosRouter = module.default;
-      app.use('/api/alunos', alunosRouter);
-    });
+    // Use MongoDB router
+    app.use('/api/alunos', alunosRouter);
   })
   .catch((error) => {
     usingMongoDB = false;
@@ -54,12 +56,8 @@ connectDB()
     console.warn('⚠️ MongoDB não disponível');
     console.warn('📝 Usando armazenamento local (JSON)');
     console.warn('💾 Dados salvos em: backend/data/alunos.json');
-
-    // Usar rotas offline
-    import('./routes/alunosOffline.js').then((module) => {
-      const alunosRouter = module.default;
-      app.use('/api/alunos', alunosRouter);
-    });
+    // Use offline router
+    app.use('/api/alunos', alunosOfflineRouter);
   });
 
 // Rota de cursos (funciona em ambos os modos)
