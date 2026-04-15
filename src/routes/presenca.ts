@@ -4,6 +4,7 @@ import {
   getPresencaDia,
   getHistoricoAluno,
   getRelatorio,
+  getRelatorioPeriodos,
 } from '../controllers/presencaController.js';
 
 const router = Router();
@@ -19,5 +20,8 @@ router.get('/aluno/:id', getHistoricoAluno);
 
 // Obter relatório (com filtro por data e curso)
 router.get('/relatorio', getRelatorio);
+
+// Obter relatório com filtro por períodos (hoje, semana, mês, etc)
+router.get('/relatorio-periodos', getRelatorioPeriodos);
 
 export default router;

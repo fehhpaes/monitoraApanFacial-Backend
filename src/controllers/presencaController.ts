@@ -202,3 +202,117 @@ export const getRelatorio = async (req: Request, res: Response): Promise<void> =
     });
   }
 };
+
+// Calcular intervalo de data baseado no período
+const calcularIntervaloData = (periodo: string): { dataInicio: Date; dataFim: Date } => {
+  const agora = new Date();
+  const dataFim = new Date(agora);
+  dataFim.setHours(23, 59, 59, 999);
+
+  const dataInicio = new Date(agora);
+  dataInicio.setHours(0, 0, 0, 0);
+
+  switch (periodo) {
+    case 'hoje':
+      // Hoje: 00:00 até 23:59 (padrão já configurado acima)
+      break;
+
+    case 'semana':
+      // Últimos 7 dias
+      dataInicio.setDate(dataInicio.getDate() - 6);
+      dataInicio.setHours(0, 0, 0, 0);
+      break;
+
+    case 'mes':
+      // Últimos 30 dias
+      dataInicio.setDate(dataInicio.getDate() - 29);
+      dataInicio.setHours(0, 0, 0, 0);
+      break;
+
+    case 'bimestre':
+      // Últimos 60 dias
+      dataInicio.setDate(dataInicio.getDate() - 59);
+      dataInicio.setHours(0, 0, 0, 0);
+      break;
+
+    case 'trimestre':
+      // Últimos 90 dias
+      dataInicio.setDate(dataInicio.getDate() - 89);
+      dataInicio.setHours(0, 0, 0, 0);
+      break;
+
+    case 'semestre':
+      // Últimos 180 dias
+      dataInicio.setDate(dataInicio.getDate() - 179);
+      dataInicio.setHours(0, 0, 0, 0);
+      break;
+
+    case 'ano':
+      // Últimos 365 dias
+      dataInicio.setDate(dataInicio.getDate() - 364);
+      dataInicio.setHours(0, 0, 0, 0);
+      break;
+
+    default:
+      // Padrão: hoje
+      break;
+  }
+
+  return { dataInicio, dataFim };
+};
+
+// Obter relatório com filtro por períodos
+export const getRelatorioPeriodos = async (req: Request, res: Response): Promise<void> => {
+  try {
+    const { periodo = 'hoje', curso, alunoId } = req.query;
+
+    // Validar período
+    const periodsValidos = ['hoje', 'semana', 'mes', 'bimestre', 'trimestre', 'semestre', 'ano'];
+    if (!periodsValidos.includes(periodo as string)) {
+      res.status(400).json({
+        success: false,
+        message: `Período inválido. Valores aceitos: ${periodsValidos.join(', ')}`,
+      });
+      return;
+    }
+
+    const { dataInicio, dataFim } = calcularIntervaloData(periodo as string);
+
+    const filtro: any = {
+      dataEntrada: { $gte: dataInicio, $lte: dataFim },
+    };
+
+    if (curso) {
+      filtro.curso = curso;
+    }
+
+    if (alunoId) {
+      filtro.alunoId = alunoId;
+    }
+
+    let relatorio = await Presenca.find(filtro);
+
+    // Ordenar por curso, depois por nome
+    relatorio.sort((a, b) => {
+      if (a.curso !== b.curso) {
+        return a.curso.localeCompare(b.curso);
+      }
+      return a.nome.localeCompare(b.nome);
+    });
+
+    res.status(200).json({
+      success: true,
+      data: relatorio,
+      total: relatorio.length,
+      periodo,
+      dataInicio: dataInicio.toISOString(),
+      dataFim: dataFim.toISOString(),
+    });
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      message: 'Erro ao gerar relatório por períodos',
+      error: error instanceof Error ? error.message : String(error),
+    });
+  }
+};
