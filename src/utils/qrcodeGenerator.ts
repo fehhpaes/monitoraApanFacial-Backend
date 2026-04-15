@@ -1,5 +1,5 @@
 import QRCode from 'qrcode';
-import cloudinary from '../config/cloudinary';
+import cloudinary from '../config/cloudinary.js';
 import { Readable } from 'stream';
 
 interface QRCodeResult {
