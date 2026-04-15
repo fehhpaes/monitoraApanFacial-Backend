@@ -6,8 +6,8 @@ WORKDIR /app
 # Copiar package.json e package-lock.json
 COPY package*.json ./
 
-# Instalar dependências
-RUN npm install
+# Instalar dependências (incluindo devDependencies para TypeScript)
+RUN npm ci --legacy-peer-deps
 
 # Copiar código fonte
 COPY . .
@@ -23,14 +23,14 @@ WORKDIR /app
 # Copiar package.json
 COPY package*.json ./
 
-# Instalar apenas dependências de produção
-RUN npm install --only=production
-
-# Copiar código compilado do builder
-COPY --from=builder /app/dist ./dist
+# Instalar apenas dependências de produção (sem devDependencies)
+RUN npm ci --legacy-peer-deps --only=production && npm cache clean --force
 
 # Criar diretórios de dados
 RUN mkdir -p /app/data
+
+# Copiar código compilado do builder
+COPY --from=builder /app/dist ./dist
 
 # Expor porta
 EXPOSE 5000
@@ -45,3 +45,4 @@ HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --retries=3 \
 
 # Comando para iniciar (usa indexAuto.js que tenta MongoDB com fallback JSON)
 CMD ["node", "dist/indexAuto.js"]
+
