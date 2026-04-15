@@ -21,7 +21,6 @@ const CursoSchema = new Schema<ICursoDocument>(
       unique: true,
       trim: true,
       maxlength: [7, 'Sigla não pode exceder 7 caracteres'],
-      match: [/^[A-Za-z0-9]+$/, 'Sigla deve conter apenas letras e números'],
     },
     tipo: {
       type: String,

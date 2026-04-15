@@ -125,14 +125,6 @@ app.post('/api/cursos', (req, res) => {
       return;
     }
 
-    if (!/^[A-Za-z0-9]+$/.test(sigla)) {
-      res.status(400).json({
-        success: false,
-        message: 'Sigla deve conter apenas letras e números',
-      });
-      return;
-    }
-
     if (!tipo || !['modular', 'integral'].includes(tipo)) {
       res.status(400).json({
         success: false,
