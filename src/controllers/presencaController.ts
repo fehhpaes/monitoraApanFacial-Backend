@@ -1,11 +1,11 @@
 import { Request, Response } from 'express';
 import { Presenca } from '../models/Presenca.js';
 import { Aluno } from '../models/Aluno.js';
+import { Funcionario } from '../models/Funcionario.js';
 
-// Registrar presença (entrada ou saída)
 export const registrarPresenca = async (req: Request, res: Response): Promise<void> => {
   try {
-    const { qrData, tipo } = req.body; // tipo: 'entrada' ou 'saida'
+    const { qrData } = req.body;
 
     if (!qrData) {
       res.status(400).json({
@@ -15,9 +15,9 @@ export const registrarPresenca = async (req: Request, res: Response): Promise<vo
       return;
     }
 
-    let alunoData;
+    let pessoaData;
     try {
-      alunoData = JSON.parse(qrData);
+      pessoaData = JSON.parse(qrData);
     } catch (parseError) {
       res.status(400).json({
         success: false,
@@ -26,9 +26,9 @@ export const registrarPresenca = async (req: Request, res: Response): Promise<vo
       return;
     }
 
-    const { _id: alunoId, nome, curso, fotoUrl, emailResponsavel } = alunoData;
+    const { _id: pessoaId, nome, curso, fotoUrl, emailResponsavel, tipo } = pessoaData;
 
-    if (!alunoId || !nome || !curso) {
+    if (!pessoaId || !nome || !curso) {
       res.status(400).json({
         success: false,
         message: 'Dados incompletos do QR Code',
@@ -36,67 +36,51 @@ export const registrarPresenca = async (req: Request, res: Response): Promise<vo
       return;
     }
 
-    // Verificar se o aluno existe
-    const aluno = await Aluno.findById(alunoId);
-    if (!aluno) {
-      res.status(404).json({
-        success: false,
-        message: 'Aluno não encontrado',
-      });
-      return;
+    let presencaTipo: 'aluno' | 'funcionario' = 'aluno';
+
+    if (tipo === 'funcionario') {
+      const funcionario = await Funcionario.findById(pessoaId);
+      if (!funcionario) {
+        res.status(404).json({
+          success: false,
+          message: 'Funcionário não encontrado',
+        });
+        return;
+      }
+      presencaTipo = 'funcionario';
+    } else {
+      const aluno = await Aluno.findById(pessoaId);
+      if (!aluno) {
+        res.status(404).json({
+          success: false,
+          message: 'Aluno não encontrado',
+        });
+        return;
+      }
+      presencaTipo = 'aluno';
     }
 
-    // Verificar se já existe entrada hoje
-    const hoje = new Date();
-    hoje.setHours(0, 0, 0, 0);
-    const amanha = new Date(hoje);
-    amanha.setDate(amanha.getDate() + 1);
-
-    const presencaHoje = await Presenca.findOne({
-      alunoId,
-      dataEntrada: { $gte: hoje, $lt: amanha },
+    const novaPresenca = new Presenca({
+      tipo: presencaTipo,
+      alunoId: presencaTipo === 'aluno' ? pessoaId : null,
+      funcionarioId: presencaTipo === 'funcionario' ? pessoaId : null,
+      nome,
+      curso,
+      fotoUrl,
+      emailResponsavel: emailResponsavel || '',
+      dataEntrada: new Date(),
+      status: 'presente',
+      dataCriacao: new Date(),
     });
 
-    let presenca;
-
-    if (!presencaHoje) {
-      // Primeira presença do dia = Entrada
-      presenca = new Presenca({
-        alunoId,
-        nome,
-        curso,
-        fotoUrl,
-        emailResponsavel,
-        dataEntrada: new Date(),
-        status: 'presente',
-        dataCriacao: new Date(),
-      });
-    } else if (!presencaHoje.dataSaida) {
-      // Já tem entrada, registrar saída
-      presencaHoje.dataSaida = new Date();
-      presencaHoje.status = 'saida';
-      presenca = presencaHoje;
-    } else {
-      // Já tem entrada e saída, ignorar novo scan
-      res.status(200).json({
-        success: true,
-        message: 'Presença já registrada para hoje',
-        data: presencaHoje,
-        alreadyRegistered: true,
-      });
-      return;
-    }
-
-    await presenca.save();
+    await novaPresenca.save();
 
     res.status(201).json({
       success: true,
-      message: presencaHoje
-        ? presencaHoje.status === 'saida'
-          ? 'Saída registrada com sucesso'
-          : 'Entrada registrada com sucesso'
+      message: presencaTipo === 'funcionario' 
+        ? 'Presença de funcionário registrada com sucesso' 
         : 'Presença registrada com sucesso',
-      data: presenca,
+      data: novaPresenca,
     });
   } catch (error) {
     res.status(500).json({
@@ -107,10 +91,9 @@ export const registrarPresenca = async (req: Request, res: Response): Promise<vo
   }
 };
 
-// Obter presença do dia
 export const getPresencaDia = async (req: Request, res: Response): Promise<void> => {
   try {
-    const { curso } = req.query;
+    const { curso, tipo } = req.query;
 
     const hoje = new Date();
     hoje.setHours(0, 0, 0, 0);
@@ -123,6 +106,10 @@ export const getPresencaDia = async (req: Request, res: Response): Promise<void>
 
     if (curso) {
       filtro.curso = curso;
+    }
+
+    if (tipo) {
+      filtro.tipo = tipo;
     }
 
     const presencas = await Presenca.find(filtro).sort({ dataEntrada: -1 });
@@ -141,12 +128,13 @@ export const getPresencaDia = async (req: Request, res: Response): Promise<void>
   }
 };
 
-// Obter histórico de presença de um aluno
 export const getHistoricoAluno = async (req: Request, res: Response): Promise<void> => {
   try {
     const { id } = req.params;
 
-    const historico = await Presenca.find({ alunoId: id }).sort({ dataEntrada: -1 });
+    const historico = await Presenca.find({ 
+      $or: [{ alunoId: id }, { funcionarioId: id }] 
+    }).sort({ dataEntrada: -1 });
 
     res.status(200).json({
       success: true,
@@ -162,10 +150,9 @@ export const getHistoricoAluno = async (req: Request, res: Response): Promise<vo
   }
 };
 
-// Obter relatório de presença
 export const getRelatorio = async (req: Request, res: Response): Promise<void> => {
   try {
-    const { dataInicio, dataFim, curso } = req.query;
+    const { dataInicio, dataFim, curso, tipo } = req.query;
 
     const filtro: any = {};
 
@@ -187,6 +174,10 @@ export const getRelatorio = async (req: Request, res: Response): Promise<void> =
       filtro.curso = curso;
     }
 
+    if (tipo) {
+      filtro.tipo = tipo;
+    }
+
     const relatorio = await Presenca.find(filtro).sort({ dataEntrada: -1 });
 
     res.status(200).json({
@@ -203,7 +194,6 @@ export const getRelatorio = async (req: Request, res: Response): Promise<void> =
   }
 };
 
-// Calcular intervalo de data baseado no período
 const calcularIntervaloData = (periodo: string): { dataInicio: Date; dataFim: Date } => {
   const agora = new Date();
   const dataFim = new Date(agora);
@@ -215,37 +205,30 @@ const calcularIntervaloData = (periodo: string): { dataInicio: Date; dataFim: Da
   switch (periodo) {
     case 'hoje':
       break;
-
     case 'semana':
       dataInicio.setDate(dataInicio.getDate() - 6);
       dataInicio.setHours(0, 0, 0, 0);
       break;
-
     case 'mes':
       dataInicio.setDate(dataInicio.getDate() - 29);
       dataInicio.setHours(0, 0, 0, 0);
       break;
-
     case 'bimestre':
       dataInicio.setDate(dataInicio.getDate() - 59);
       dataInicio.setHours(0, 0, 0, 0);
       break;
-
     case 'trimestre':
       dataInicio.setDate(dataInicio.getDate() - 89);
       dataInicio.setHours(0, 0, 0, 0);
       break;
-
     case 'semestre':
       dataInicio.setDate(dataInicio.getDate() - 179);
       dataInicio.setHours(0, 0, 0, 0);
       break;
-
     case 'ano':
       dataInicio.setDate(dataInicio.getDate() - 364);
       dataInicio.setHours(0, 0, 0, 0);
       break;
-
     default:
       break;
   }
@@ -253,7 +236,6 @@ const calcularIntervaloData = (periodo: string): { dataInicio: Date; dataFim: Da
   return { dataInicio, dataFim };
 };
 
-// Limpar presenças do dia (para testes)
 export const limparPresencaDia = async (req: Request, res: Response): Promise<void> => {
   try {
     const { confirmar } = req.query;
@@ -290,12 +272,10 @@ export const limparPresencaDia = async (req: Request, res: Response): Promise<vo
   }
 };
 
-// Obter relatório com filtro por períodos
 export const getRelatorioPeriodos = async (req: Request, res: Response): Promise<void> => {
   try {
-    const { periodo = 'hoje', curso, alunoId } = req.query;
+    const { periodo = 'hoje', curso, tipo } = req.query;
 
-    // Validar período
     const periodsValidos = ['hoje', 'semana', 'mes', 'bimestre', 'trimestre', 'semestre', 'ano'];
     if (!periodsValidos.includes(periodo as string)) {
       res.status(400).json({
@@ -315,13 +295,12 @@ export const getRelatorioPeriodos = async (req: Request, res: Response): Promise
       filtro.curso = curso;
     }
 
-    if (alunoId) {
-      filtro.alunoId = alunoId;
+    if (tipo) {
+      filtro.tipo = tipo;
     }
 
     let relatorio = await Presenca.find(filtro);
 
-    // Ordenar por curso, depois por nome
     relatorio.sort((a, b) => {
       if (a.curso !== b.curso) {
         return a.curso.localeCompare(b.curso);

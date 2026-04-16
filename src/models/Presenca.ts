@@ -1,11 +1,13 @@
 import mongoose, { Schema, Document } from 'mongoose';
 
 export interface IPresencaDocument extends Document {
-  alunoId: string;
+  tipo: 'aluno' | 'funcionario';
+  alunoId?: string;
+  funcionarioId?: string;
   nome: string;
   curso: string;
   fotoUrl: string;
-  emailResponsavel: string;
+  emailResponsavel?: string;
   dataEntrada: Date;
   dataSaida?: Date;
   status: 'presente' | 'atrasado' | 'saida';
@@ -14,9 +16,21 @@ export interface IPresencaDocument extends Document {
 
 const PresencaSchema = new Schema<IPresencaDocument>(
   {
+    tipo: {
+      type: String,
+      enum: ['aluno', 'funcionario'],
+      required: true,
+      default: 'aluno',
+      index: true,
+    },
     alunoId: {
       type: String,
-      required: [true, 'ID do aluno é obrigatório'],
+      default: null,
+      index: true,
+    },
+    funcionarioId: {
+      type: String,
+      default: null,
       index: true,
     },
     nome: {
@@ -26,7 +40,7 @@ const PresencaSchema = new Schema<IPresencaDocument>(
     },
     curso: {
       type: String,
-      required: [true, 'Curso é obrigatório'],
+      required: [true, 'Curso/Cargo é obrigatório'],
       trim: true,
       index: true,
     },
@@ -36,7 +50,7 @@ const PresencaSchema = new Schema<IPresencaDocument>(
     },
     emailResponsavel: {
       type: String,
-      required: true,
+      default: '',
     },
     dataEntrada: {
       type: Date,

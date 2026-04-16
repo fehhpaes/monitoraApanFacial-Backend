@@ -1,37 +1,34 @@
 import { Request, Response } from 'express';
 import { v2 as cloudinary } from 'cloudinary';
-import { Aluno } from '../models/Aluno.js';
+import { Funcionario } from '../models/Funcionario.js';
 import { z } from 'zod';
-import { generateQRCodeForStudent, deleteQRCode } from '../utils/qrcodeGenerator.js';
+import { generateQRCodeForStudent, deleteQRCode as deleteQRCodeUtil } from '../utils/qrcodeGenerator.js';
 
-// Validação com Zod
-const createAlunoSchema = z.object({
+const createFuncionarioSchema = z.object({
   nome: z.string().min(2, 'Nome deve ter no mínimo 2 caracteres'),
-  curso: z.string().min(1, 'Curso é obrigatório'),
-  nomeResponsavel: z.string().min(2, 'Nome do responsável deve ter no mínimo 2 caracteres'),
-  emailResponsavel: z.string().email('Email inválido'),
+  cargo: z.string().min(1, 'Cargo é obrigatório'),
   fotoUrl: z.string().url('URL da foto inválida'),
   fotoPublicId: z.string().min(1, 'ID público da foto é obrigatório'),
 });
 
-const updateAlunoSchema = createAlunoSchema.partial();
+const updateFuncionarioSchema = createFuncionarioSchema.partial();
 
-export const createAluno = async (req: Request, res: Response): Promise<void> => {
+export const createFuncionario = async (req: Request, res: Response): Promise<void> => {
   try {
-    const data = createAlunoSchema.parse(req.body);
+    const data = createFuncionarioSchema.parse(req.body);
 
-    const novoAluno = new Aluno({
+    const novoFuncionario = new Funcionario({
       ...data,
       dataCadastro: new Date(),
       dataAtualizacao: new Date(),
     });
 
-    await novoAluno.save();
+    await novoFuncionario.save();
 
     res.status(201).json({
       success: true,
-      message: 'Aluno cadastrado com sucesso',
-      data: novoAluno,
+      message: 'Funcionário cadastrado com sucesso',
+      data: novoFuncionario,
     });
   } catch (error) {
     if (error instanceof z.ZodError) {
@@ -43,95 +40,94 @@ export const createAluno = async (req: Request, res: Response): Promise<void> =>
     } else {
       res.status(500).json({
         success: false,
-        message: 'Erro ao cadastrar aluno',
+        message: 'Erro ao cadastrar funcionário',
         error: error instanceof Error ? error.message : String(error),
       });
     }
   }
 };
 
-export const getAllAlunos = async (_req: Request, res: Response): Promise<void> => {
+export const getAllFuncionarios = async (_req: Request, res: Response): Promise<void> => {
   try {
-    const alunos = await Aluno.find().sort({ dataCadastro: -1 });
+    const funcionarios = await Funcionario.find().sort({ dataCadastro: -1 });
 
     res.status(200).json({
       success: true,
-      data: alunos,
-      total: alunos.length,
+      data: funcionarios,
+      total: funcionarios.length,
     });
   } catch (error) {
     res.status(500).json({
       success: false,
-      message: 'Erro ao buscar alunos',
+      message: 'Erro ao buscar funcionários',
       error: error instanceof Error ? error.message : String(error),
     });
   }
 };
 
-export const getAlunoById = async (req: Request, res: Response): Promise<void> => {
+export const getFuncionarioById = async (req: Request, res: Response): Promise<void> => {
   try {
     const { id } = req.params;
 
-    const aluno = await Aluno.findById(id);
+    const funcionario = await Funcionario.findById(id);
 
-    if (!aluno) {
+    if (!funcionario) {
       res.status(404).json({
         success: false,
-        message: 'Aluno não encontrado',
+        message: 'Funcionário não encontrado',
       });
       return;
     }
 
     res.status(200).json({
       success: true,
-      data: aluno,
+      data: funcionario,
     });
   } catch (error) {
     res.status(500).json({
       success: false,
-      message: 'Erro ao buscar aluno',
+      message: 'Erro ao buscar funcionário',
       error: error instanceof Error ? error.message : String(error),
     });
   }
 };
 
-export const updateAluno = async (req: Request, res: Response): Promise<void> => {
+export const updateFuncionario = async (req: Request, res: Response): Promise<void> => {
   try {
     const { id } = req.params;
-    const data = updateAlunoSchema.parse(req.body);
+    const data = updateFuncionarioSchema.parse(req.body);
 
-    // Se uma nova foto foi enviada, deletar a antiga do Cloudinary
     if (data.fotoPublicId) {
-      const alunoAntigo = await Aluno.findById(id);
-      if (alunoAntigo?.fotoPublicId && alunoAntigo.fotoPublicId !== data.fotoPublicId) {
+      const funcionarioAntigo = await Funcionario.findById(id);
+      if (funcionarioAntigo?.fotoPublicId && funcionarioAntigo.fotoPublicId !== data.fotoPublicId) {
         try {
-          await cloudinary.uploader.destroy(alunoAntigo.fotoPublicId);
+          await cloudinary.uploader.destroy(funcionarioAntigo.fotoPublicId);
         } catch (deleteError) {
           console.error('Erro ao deletar foto antiga do Cloudinary:', deleteError);
         }
       }
     }
 
-    const alunoAtualizado = await Aluno.findByIdAndUpdate(
+    const functorioAtualizado = await Funcionario.findByIdAndUpdate(
       id,
       { ...data, dataAtualizacao: new Date() },
       { new: true, runValidators: true }
     );
 
-    if (!alunoAtualizado) {
+    if (!functorioAtualizado) {
       res.status(404).json({
         success: false,
-        message: 'Aluno não encontrado',
+        message: 'Funcionário não encontrado',
       });
       return;
     }
 
     res.status(200).json({
       success: true,
-      message: 'Aluno atualizado com sucesso',
-      data: alunoAtualizado,
+      message: 'Funcionário atualizado com sucesso',
+      data: functorioAtualizado,
     });
-   } catch (error) {
+  } catch (error) {
     if (error instanceof z.ZodError) {
       res.status(400).json({
         success: false,
@@ -141,31 +137,30 @@ export const updateAluno = async (req: Request, res: Response): Promise<void> =>
     } else {
       res.status(500).json({
         success: false,
-        message: 'Erro ao atualizar aluno',
+        message: 'Erro ao atualizar funcionário',
         error: error instanceof Error ? error.message : String(error),
       });
     }
   }
 };
 
-export const deleteAluno = async (req: Request, res: Response): Promise<void> => {
+export const deleteFuncionario = async (req: Request, res: Response): Promise<void> => {
   try {
     const { id } = req.params;
 
-    const aluno = await Aluno.findByIdAndDelete(id);
+    const functorio = await Funcionario.findByIdAndDelete(id);
 
-    if (!aluno) {
+    if (!functorio) {
       res.status(404).json({
         success: false,
-        message: 'Aluno não encontrado',
+        message: 'Funcionário não encontrado',
       });
       return;
     }
 
-    // Deletar foto do Cloudinary
-    if (aluno.fotoPublicId) {
+    if (functorio.fotoPublicId) {
       try {
-        await cloudinary.uploader.destroy(aluno.fotoPublicId);
+        await cloudinary.uploader.destroy(functorio.fotoPublicId);
       } catch (deleteError) {
         console.error('Erro ao deletar foto do Cloudinary:', deleteError);
       }
@@ -173,18 +168,17 @@ export const deleteAluno = async (req: Request, res: Response): Promise<void> =>
 
     res.status(200).json({
       success: true,
-      message: 'Aluno deletado com sucesso',
+      message: 'Funcionário deletado com sucesso',
     });
   } catch (error) {
     res.status(500).json({
       success: false,
-      message: 'Erro ao deletar aluno',
+      message: 'Erro ao deletar funcionário',
       error: error instanceof Error ? error.message : String(error),
     });
   }
 };
 
-// Upload de foto para Cloudinary
 export const uploadFoto = async (req: Request, res: Response): Promise<void> => {
   try {
     if (!req.body.foto) {
@@ -195,9 +189,8 @@ export const uploadFoto = async (req: Request, res: Response): Promise<void> => 
       return;
     }
 
-    // Upload para Cloudinary
     const result = await cloudinary.uploader.upload(req.body.foto, {
-      folder: 'monitoraapan/alunos',
+      folder: 'monitoraapan/funcionarios',
       resource_type: 'auto',
       quality: 'auto',
       transformation: [{ width: 500, height: 500, crop: 'thumb', gravity: 'face' }],
@@ -219,42 +212,38 @@ export const uploadFoto = async (req: Request, res: Response): Promise<void> => 
   }
 };
 
-// Gerar QR Code para um aluno
 export const generateQRCode = async (req: Request, res: Response): Promise<void> => {
   try {
     const { id } = req.params;
 
-    const aluno = await Aluno.findById(id);
+    const functorio = await Funcionario.findById(id);
 
-    if (!aluno) {
+    if (!functorio) {
       res.status(404).json({
         success: false,
-        message: 'Aluno não encontrado',
+        message: 'Funcionário não encontrado',
       });
       return;
     }
 
-    // Deletar QR Code antigo se existir
-    if (aluno.qrCodePublicId) {
+    if (functorio.qrCodePublicId) {
       try {
-        await deleteQRCode(aluno.qrCodePublicId);
+        await deleteQRCodeUtil(functorio.qrCodePublicId);
       } catch (error) {
         console.error('Erro ao deletar QR Code antigo:', error);
       }
     }
 
-    // Gerar novo QR Code
     const qrCodeData = await generateQRCodeForStudent({
-      _id: aluno._id.toString(),
-      nome: aluno.nome,
-      curso: aluno.curso,
-      fotoUrl: aluno.fotoUrl,
-      emailResponsavel: aluno.emailResponsavel,
-      tipo: 'aluno',
+      _id: functorio._id.toString(),
+      nome: functorio.nome,
+      curso: functorio.cargo,
+      fotoUrl: functorio.fotoUrl,
+      emailResponsavel: '',
+      tipo: 'funcionario',
     });
 
-    // Atualizar aluno com dados do QR Code
-    const alunoAtualizado = await Aluno.findByIdAndUpdate(
+    const functorioAtualizado = await Funcionario.findByIdAndUpdate(
       id,
       {
         qrCodeUrl: qrCodeData?.qrCodeUrl,
@@ -269,8 +258,8 @@ export const generateQRCode = async (req: Request, res: Response): Promise<void>
       success: true,
       message: 'QR Code gerado com sucesso',
       data: {
-        qrCodeUrl: alunoAtualizado?.qrCodeUrl,
-        qrCodeGerado: alunoAtualizado?.qrCodeGerado,
+        qrCodeUrl: functorioAtualizado?.qrCodeUrl,
+        qrCodeGerado: functorioAtualizado?.qrCodeGerado,
       },
     });
   } catch (error) {
@@ -282,34 +271,31 @@ export const generateQRCode = async (req: Request, res: Response): Promise<void>
   }
 };
 
-// Deletar QR Code de um aluno
-export const deleteAlunoQRCode = async (req: Request, res: Response): Promise<void> => {
+export const deleteQRCode = async (req: Request, res: Response): Promise<void> => {
   try {
     const { id } = req.params;
 
-    const aluno = await Aluno.findById(id);
+    const functorio = await Funcionario.findById(id);
 
-    if (!aluno) {
+    if (!functorio) {
       res.status(404).json({
         success: false,
-        message: 'Aluno não encontrado',
+        message: 'Funcionário não encontrado',
       });
       return;
     }
 
-    if (!aluno.qrCodePublicId) {
+    if (!functorio.qrCodePublicId) {
       res.status(400).json({
         success: false,
-        message: 'Este aluno não possui QR Code',
+        message: 'Este funcionário não possui QR Code',
       });
       return;
     }
 
-    // Deletar do Cloudinary
-    await deleteQRCode(aluno.qrCodePublicId);
+    await deleteQRCodeUtil(functorio.qrCodePublicId);
 
-    // Atualizar aluno
-    const alunoAtualizado = await Aluno.findByIdAndUpdate(
+    const functorioAtualizado = await Funcionario.findByIdAndUpdate(
       id,
       {
         qrCodeUrl: null,
@@ -323,7 +309,7 @@ export const deleteAlunoQRCode = async (req: Request, res: Response): Promise<vo
     res.status(200).json({
       success: true,
       message: 'QR Code deletado com sucesso',
-      data: alunoAtualizado,
+      data: functorioAtualizado,
     });
   } catch (error) {
     res.status(500).json({
@@ -334,32 +320,31 @@ export const deleteAlunoQRCode = async (req: Request, res: Response): Promise<vo
   }
 };
 
-// Diagnóstico - listar alunos com QR codes gerados
-export const getAlunosComQRCode = async (_req: Request, res: Response): Promise<void> => {
+export const getFuncionariosComQRCode = async (_req: Request, res: Response): Promise<void> => {
   try {
-    const alunosComQR = await Aluno.find({ qrCodeGerado: true }).select(
-      'nome curso qrCodeUrl qrCodeGerado dataAtualizacao'
+    const funcComQR = await Funcionario.find({ qrCodeGerado: true }).select(
+      'nome cargo qrCodeUrl qrCodeGerado dataAtualizacao'
     );
 
-    const alunosSemQR = await Aluno.find({ qrCodeGerado: false }).select(
-      'nome curso qrCodeGerado dataCadastro'
+    const funcSemQR = await Funcionario.find({ qrCodeGerado: false }).select(
+      'nome cargo qrCodeGerado dataCadastro'
     );
 
-    const totalAlunos = await Aluno.countDocuments();
+    const totalFuncionarios = await Funcionario.countDocuments();
 
     res.status(200).json({
       success: true,
       message: 'Diagnóstico de QR Codes',
       data: {
-        totalAlunos,
-        comQRCode: alunosComQR,
-        semQRCode: alunosSemQR,
+        totalFuncionarios,
+        comQRCode: funcComQR,
+        semQRCode: funcSemQR,
         estatisticas: {
-          total: totalAlunos,
-          comQRCode: alunosComQR.length,
-          semQRCode: alunosSemQR.length,
-          percentualGerado: totalAlunos > 0
-            ? Math.round((alunosComQR.length / totalAlunos) * 100)
+          total: totalFuncionarios,
+          comQRCode: funcComQR.length,
+          semQRCode: funcSemQR.length,
+          percentualGerado: totalFuncionarios > 0
+            ? Math.round((funcComQR.length / totalFuncionarios) * 100)
             : 0,
         },
       },

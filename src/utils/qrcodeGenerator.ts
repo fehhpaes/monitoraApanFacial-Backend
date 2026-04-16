@@ -13,6 +13,7 @@ export const generateQRCodeForStudent = async (studentData: {
   curso: string;
   fotoUrl: string;
   emailResponsavel: string;
+  tipo?: 'aluno' | 'funcionario';
 }): Promise<QRCodeResult> => {
   try {
     // Criar dados do QR Code em JSON
@@ -22,6 +23,7 @@ export const generateQRCodeForStudent = async (studentData: {
       curso: studentData.curso,
       fotoUrl: studentData.fotoUrl,
       emailResponsavel: studentData.emailResponsavel,
+      tipo: studentData.tipo || 'aluno',
       geradoEm: new Date().toISOString(),
     });
 

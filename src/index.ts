@@ -7,6 +7,8 @@ import { errorHandler, notFoundHandler } from './middleware/errorHandler.js';
 import alunosRouter from './routes/alunos.js';
 import cursosRouter from './routes/cursos.js';
 import presencaRouter from './routes/presenca.js';
+import funcionariosRouter from './routes/funcionarios.js';
+import cargosRouter from './routes/cargos.js';
 
 const app = express();
 
@@ -44,6 +46,8 @@ try {
 app.use('/api/alunos', alunosRouter);
 app.use('/api/cursos', cursosRouter);
 app.use('/api/presenca', presencaRouter);
+app.use('/api/funcionarios', funcionariosRouter);
+app.use('/api/cargos', cargosRouter);
 
 // Health check
 app.get('/health', (_req, res) => {
