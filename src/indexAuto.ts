@@ -6,6 +6,7 @@ import { errorHandler, notFoundHandler } from './middleware/errorHandler.js';
 import * as jsonStorage from './services/jsonStorage.js';
 import alunosRouter from './routes/alunos.js';
 import alunosOfflineRouter from './routes/alunosOffline.js';
+import presencaRouter from './routes/presenca.js';
 import { connectDB } from './config/mongodb.js';
 
 const app = express();
@@ -61,6 +62,12 @@ try {
   } else {
     app.use('/api/alunos', alunosOfflineRouter);
     console.log('✅ Rotas de alunos (JSON) registradas');
+  }
+
+  // Rotas de presença (MongoDB only)
+  if (usingMongoDB) {
+    app.use('/api/presenca', presencaRouter);
+    console.log('✅ Rotas de presença registradas');
   }
 
   // Rota de cursos (funciona em ambos os modos)
