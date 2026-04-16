@@ -8,9 +8,13 @@ import {
   uploadFoto,
   generateQRCode,
   deleteAlunoQRCode,
+  getAlunosComQRCode,
 } from '../controllers/alunosController.js';
 
 const router = Router();
+
+// Rota de diagnóstico - listar alunos com QR codes
+router.get('/diagnostico/qrcode', getAlunosComQRCode);
 
 // Upload deve vir antes de /:id para evitar conflito
 router.post('/upload/foto', uploadFoto);

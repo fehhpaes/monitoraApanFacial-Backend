@@ -332,3 +332,42 @@ export const deleteAlunoQRCode = async (req: Request, res: Response): Promise<vo
     });
   }
 };
+
+// Diagnóstico - listar alunos com QR codes gerados
+export const getAlunosComQRCode = async (_req: Request, res: Response): Promise<void> => {
+  try {
+    const alunosComQR = await Aluno.find({ qrCodeGerado: true }).select(
+      'nome curso qrCodeUrl qrCodeGerado dataAtualizacao'
+    );
+
+    const alunosSemQR = await Aluno.find({ qrCodeGerado: false }).select(
+      'nome curso qrCodeGerado dataCadastro'
+    );
+
+    const totalAlunos = await Aluno.countDocuments();
+
+    res.status(200).json({
+      success: true,
+      message: 'Diagnóstico de QR Codes',
+      data: {
+        totalAlunos,
+        comQRCode: alunosComQR,
+        semQRCode: alunosSemQR,
+        estatisticas: {
+          total: totalAlunos,
+          comQRCode: alunosComQR.length,
+          semQRCode: alunosSemQR.length,
+          percentualGerado: totalAlunos > 0
+            ? Math.round((alunosComQR.length / totalAlunos) * 100)
+            : 0,
+        },
+      },
+    });
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      message: 'Erro ao buscar diagnóstico',
+      error: error instanceof Error ? error.message : String(error),
+    });
+  }
+};
