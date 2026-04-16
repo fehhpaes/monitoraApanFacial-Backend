@@ -7,6 +7,7 @@ import * as jsonStorage from './services/jsonStorage.js';
 import alunosRouter from './routes/alunos.js';
 import alunosOfflineRouter from './routes/alunosOffline.js';
 import presencaRouter from './routes/presenca.js';
+import funcionariosRouter from './routes/funcionarios.js';
 import { connectDB } from './config/mongodb.js';
 
 const app = express();
@@ -68,6 +69,62 @@ try {
   if (usingMongoDB) {
     app.use('/api/presenca', presencaRouter);
     console.log('✅ Rotas de presença registradas');
+  }
+
+  // Rotas de funcionários e cargos (MongoDB only)
+  if (usingMongoDB) {
+    app.use('/api/funcionarios', funcionariosRouter);
+    console.log('✅ Rotas de funcionários registradas');
+    
+    // Rota de cargos (inline no indexAuto para simplificar)
+    app.get('/api/cargos', (_req, res) => {
+      import('./models/Cargo.js').then((module) => {
+        const Cargo = module.Cargo;
+        Cargo.find().sort({ nome: 1 }).then((cargos) => {
+          res.status(200).json({ success: true, data: cargos, total: cargos.length });
+        }).catch((error) => {
+          res.status(500).json({ success: false, message: 'Erro ao buscar cargos', error: error.message });
+        });
+      });
+    });
+
+    app.post('/api/cargos', (req, res) => {
+      const { nome } = req.body;
+      if (!nome) {
+        res.status(400).json({ success: false, message: 'Nome do cargo é obrigatório' });
+        return;
+      }
+      import('./models/Cargo.js').then((module) => {
+        const Cargo = module.Cargo;
+        const novoCargo = new Cargo({ nome: nome.trim(), dataCriacao: new Date() });
+        novoCargo.save().then(() => {
+          res.status(201).json({ success: true, message: 'Cargo criado com sucesso', data: novoCargo });
+        }).catch((error) => {
+          if (error.code === 11000) {
+            res.status(400).json({ success: false, message: 'Cargo com este nome já existe' });
+          } else {
+            res.status(400).json({ success: false, message: error.message || 'Erro ao criar cargo' });
+          }
+        });
+      });
+    });
+
+    app.delete('/api/cargos/:id', (req, res) => {
+      import('./models/Cargo.js').then((module) => {
+        const Cargo = module.Cargo;
+        Cargo.findByIdAndDelete(req.params.id).then((deleted) => {
+          if (!deleted) {
+            res.status(404).json({ success: false, message: 'Cargo não encontrado' });
+            return;
+          }
+          res.status(200).json({ success: true, message: 'Cargo deletado com sucesso' });
+        }).catch((error) => {
+          res.status(500).json({ success: false, message: 'Erro ao deletar cargo', error: error.message });
+        });
+      });
+    });
+
+    console.log('✅ Rotas de cargos registradas');
   }
 
   // Rota de cursos (funciona em ambos os modos)
