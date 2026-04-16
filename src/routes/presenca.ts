@@ -5,6 +5,7 @@ import {
   getHistoricoAluno,
   getRelatorio,
   getRelatorioPeriodos,
+  limparPresencaDia,
 } from '../controllers/presencaController.js';
 
 const router = Router();
@@ -14,6 +15,9 @@ router.post('/registrar', registrarPresenca);
 
 // Obter presenças do dia (com filtro opcional por curso)
 router.get('/dia', getPresencaDia);
+
+// Limpar presenças do dia (para testes)
+router.delete('/dia', limparPresencaDia);
 
 // Obter histórico de presença de um aluno
 router.get('/aluno/:id', getHistoricoAluno);

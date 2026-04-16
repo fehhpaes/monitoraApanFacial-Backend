@@ -214,51 +214,80 @@ const calcularIntervaloData = (periodo: string): { dataInicio: Date; dataFim: Da
 
   switch (periodo) {
     case 'hoje':
-      // Hoje: 00:00 até 23:59 (padrão já configurado acima)
       break;
 
     case 'semana':
-      // Últimos 7 dias
       dataInicio.setDate(dataInicio.getDate() - 6);
       dataInicio.setHours(0, 0, 0, 0);
       break;
 
     case 'mes':
-      // Últimos 30 dias
       dataInicio.setDate(dataInicio.getDate() - 29);
       dataInicio.setHours(0, 0, 0, 0);
       break;
 
     case 'bimestre':
-      // Últimos 60 dias
       dataInicio.setDate(dataInicio.getDate() - 59);
       dataInicio.setHours(0, 0, 0, 0);
       break;
 
     case 'trimestre':
-      // Últimos 90 dias
       dataInicio.setDate(dataInicio.getDate() - 89);
       dataInicio.setHours(0, 0, 0, 0);
       break;
 
     case 'semestre':
-      // Últimos 180 dias
       dataInicio.setDate(dataInicio.getDate() - 179);
       dataInicio.setHours(0, 0, 0, 0);
       break;
 
     case 'ano':
-      // Últimos 365 dias
       dataInicio.setDate(dataInicio.getDate() - 364);
       dataInicio.setHours(0, 0, 0, 0);
       break;
 
     default:
-      // Padrão: hoje
       break;
   }
 
   return { dataInicio, dataFim };
+};
+
+// Limpar presenças do dia (para testes)
+export const limparPresencaDia = async (req: Request, res: Response): Promise<void> => {
+  try {
+    const { confirmar } = req.query;
+
+    if (confirmar !== 'true') {
+      res.status(400).json({
+        success: false,
+        message: 'Para confirmar a exclusão, adicione ?confirmar=true na URL',
+        warning: 'Isso excluirá TODAS as presenças de HOJE!',
+      });
+      return;
+    }
+
+    const hoje = new Date();
+    hoje.setHours(0, 0, 0, 0);
+    const amanha = new Date(hoje);
+    amanha.setDate(amanha.getDate() + 1);
+
+    const resultado = await Presenca.deleteMany({
+      dataEntrada: { $gte: hoje, $lt: amanha },
+    });
+
+    res.status(200).json({
+      success: true,
+      message: `${resultado.deletedCount} presença(s) excluída(s) com sucesso`,
+      deletedCount: resultado.deletedCount,
+    });
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      message: 'Erro ao limpar presenças',
+      error: error instanceof Error ? error.message : String(error),
+    });
+  }
 };
 
 // Obter relatório com filtro por períodos
