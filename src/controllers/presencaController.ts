@@ -60,6 +60,22 @@ export const registrarPresenca = async (req: Request, res: Response): Promise<vo
       presencaTipo = 'aluno';
     }
 
+    // Verificar se já existe um registro hoje para alternar entre entrada e saída
+    const hoje = new Date();
+    hoje.setHours(0, 0, 0, 0);
+
+    const ultimaPresenca = await Presenca.findOne({
+      $or: [
+        { alunoId: presencaTipo === 'aluno' ? pessoaId : null },
+        { funcionarioId: presencaTipo === 'funcionario' ? pessoaId : null }
+      ],
+      dataEntrada: { $gte: hoje }
+    }).sort({ dataEntrada: -1 });
+
+    const statusFinal = (ultimaPresenca && ultimaPresenca.status === 'presente') 
+      ? 'saida' 
+      : 'presente';
+
     const novaPresenca = new Presenca({
       tipo: presencaTipo,
       alunoId: presencaTipo === 'aluno' ? pessoaId : null,
@@ -69,7 +85,7 @@ export const registrarPresenca = async (req: Request, res: Response): Promise<vo
       fotoUrl,
       emailResponsavel: emailResponsavel || '',
       dataEntrada: new Date(),
-      status: 'presente',
+      status: statusFinal,
       dataCriacao: new Date(),
     });
 
